@@ -2,3 +2,5 @@ rdkit
 ord_schema
 protobuf
 datasets
+exmol
+requests

@@ -700,7 +700,7 @@ class OrdDataset(datasets.GeneratorBasedBuilder):
                     rxn_name = next(
                         i.value
                         for i in rxn.identifiers
-                        if i.type == reaction_pb2.ReactionIdentifier.NAME
+                        if i.type == reaction_pb2.ReactionIdentifier.REACTION_TYPE
                     )
                 except StopIteration:
                     pass
