@@ -47,12 +47,14 @@ def product_task(full=False):
     output = []
     for i, example in enumerate(data):
         s = example["text"].split(">")
-        if '.' in s:
-            continue # only doing single product reactions for now
+        if "." in s:
+            continue  # only doing single product reactions for now
         product = sanitize_smiles(s[-1])[1]
         if not product:
             continue
-        yield ">".join(s[:-1]) + ">", partial(product_eval, y=product), product, make_distractors(product, 4)
+        yield ">".join(s[:-1]) + ">", partial(
+            product_eval, y=product
+        ), product, make_distractors(product, 4)
 
 
 def valid_mol_task(full=False):
@@ -73,7 +75,7 @@ def valid_mol_task(full=False):
 
         # now we find distractors that if appended to s, will be invalid molecules
         ds_mol = make_distractors(mol, n=25)
-        ds = [d[len(d) // 2:] for d in ds_mol]
+        ds = [d[len(d) // 2 :] for d in ds_mol]
         invalid_ds = []
         for i in range(len(ds)):
             if not Chem.MolFromSmiles(s + ds[i]):
@@ -82,7 +84,8 @@ def valid_mol_task(full=False):
                     break
         if len(invalid_ds) < 4:
             continue
-        yield s, partial(valid_mol_eval, prompt=s), mol[len(mol) // 2:], invalid_ds
+        yield s, partial(valid_mol_eval, prompt=s), mol[len(mol) // 2 :], invalid_ds
+
 
 def name_mol_task(full=False):
     data = load_dataset(
@@ -100,6 +103,7 @@ def name_mol_task(full=False):
         observed.add(smiles[0])
         yield smiles[0], lambda x: x == names[0], names[0], names[1:5]
 
+
 def make_options(ref: str, distractors: List[str]) -> Tuple[str, str]:
     """Return string of options (as letters) and correct answer"""
     options = [ref] + distractors
@@ -110,59 +114,66 @@ def make_options(ref: str, distractors: List[str]) -> Tuple[str, str]:
     )
 
 
-template_1 = """
-What is the product from this reaction:
+template_1 = """What is the product from this reaction:
 {prompt}?
 
-Options:
+Choices:
 {options}
 
-Answer:"""
+Correct answer:"""
 
-template_2 = """
-What is a valid completion of this molecule:
+template_2 = """What is a valid completion of this molecule:
 {prompt}?
 
-Options:
+Choices:
 {options}
 
-Answer:"""
+Correct answer:"""
 
-template_3 = """
-What is the IUPAC name of this molecule:
+template_3 = """What is the IUPAC name of this molecule:
 {prompt}?
 
-Options:
+Choices:
 {options}
 
-Answer:"""
+Correct answer:"""
 if __name__ == "__main__":
     seed = 0
     random.seed(seed)
-    TASK_COUNT = 1
+    TASK_COUNT = 100
     count = 0
-    for prompt, eval, ref, distractors in product_task():
-        options, answer = make_options(ref, distractors)
-        print(template_1.format(prompt=prompt, options=options))
-        print(answer)
-        count += 1
-        if count == TASK_COUNT:
-            break
+    with open("out.jsonl", "w") as f:
+        for prompt, eval, ref, distractors in product_task():
+            options, answer = make_options(ref, distractors)
+            prompt = template_1.format(prompt=prompt, options=options)
+            json = f'{{"prompt": "{prompt}", "completion": "{answer}"}}'.encode(
+                "unicode_escape"
+            ).decode("utf-8")
+            f.write(json + "\n")
+            count += 1
+            if count == TASK_COUNT:
+                break
 
-    count = 0
-    for prompt, eval, ref, distractors in valid_mol_task():
-        options, answer = make_options(ref, distractors)
-        print(template_2.format(prompt=prompt, options=options))
-        print(answer)
-        count += 1
-        if count == TASK_COUNT:
-            break
+        count = 0
+        for prompt, eval, ref, distractors in valid_mol_task():
+            options, answer = make_options(ref, distractors)
+            prompt = template_2.format(prompt=prompt, options=options)
+            json = f'{{"prompt": "{prompt}", "completion": "{answer}"}}'.encode(
+                "unicode_escape"
+            ).decode("utf-8")
+            f.write(json + "\n")
+            count += 1
+            if count == TASK_COUNT:
+                break
 
-    count = 0
-    for prompt, eval, ref, distractors in name_mol_task():
-        options, answer = make_options(ref, distractors)
-        print(template_3.format(prompt=prompt, options=options))
-        print(answer)
-        count += 1
-        if count == TASK_COUNT:
-            break
+        count = 0
+        for prompt, eval, ref, distractors in name_mol_task():
+            options, answer = make_options(ref, distractors)
+            prompt = template_3.format(prompt=prompt, options=options)
+            json = f'{{"prompt": "{prompt}", "completion": "{answer}"}}'.encode(
+                "unicode_escape"
+            ).decode("utf-8")
+            f.write(json + "\n")
+            count += 1
+            if count == TASK_COUNT:
+                break
